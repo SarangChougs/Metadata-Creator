@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Creator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Bootstrap Alert Popup at the Top -->
+    <div id="popupAlert" class="alert alert-success alert-dismissible fade show" role="alert" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; max-width: 400px;">
+        <strong id="popupAlertMessage">Success!</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Metadata Creator: A GUI tool to create metadata for image datasets easily</h1>
+            <!-- Button to open the "How to Use" modal -->
+        <button type="button" class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#howToUseModal">
+            How to Use
+        </button>
+        <div class="row">
+            <!-- Input fields (left column) -->
+            <div class="col-md-8">
+                <!-- Collapsible Card for Upload Section -->
+                <div class="card">
+                    <div class="card-header" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#uploadSection" aria-expanded="false" aria-controls="uploadSection">
+                        <h5 class="mb-0">Upload Section</h5>
+                    </div>
+                    
+                    <div id="uploadSection" class="collapse">
+                        <div class="card-body">
+                            <!-- Existing File Upload Inputs -->
+                            <div class="mb-3">
+                                <label for="existingMetadata" class="form-label">Select existing metadata file (if present)</label>
+                                <input type="file" id="existingMetadata" name="existingMetadataFile" accept=".jsonl" class="form-control">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="imageCSV" class="form-label">Upload Image CSV</label>
+                                <input type="file" id="imageCSV" accept=".csv" class="form-control">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="pdfFilesInput" class="form-label">Select Product Manuals (PDF)</label>
+                                <input type="file" id="pdfFilesInput" accept=".pdf" class="form-control" multiple onchange="loadPDFFiles()">
+                            </div>
+                            <!-- Dropdown to select a PDF from the chosen folder -->
+                            <div class="mb-3">
+                                <label for="pdfFiles" class="form-label">Select Product Manual (PDF):</label>
+                                <select id="pdfFiles" class="form-select" onchange="loadPDFPreview()">
+                                    <option value="">Select a PDF file</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Collapsible Card for Edit Form -->
+    <div class="card mb-3">
+        <div class="card-header" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#editFormSection" aria-expanded="false" aria-controls="editFormSection">
+            <h5 class="mb-0">Edit Entry</h5>
+        </div>
+        
+        <div id="editFormSection" class="collapse">
+            <div class="card-body">
+                <form id="entryForm" enctype="multipart/form-data">
+                    <!-- Input fields for the Edit Form -->
+                    <div class="mb-3">
+                        <label for="filename">Image File name:</label>
+                        <input type="text" id="filename" name="filename" class="form-control">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="manual">Manual Name:</label>
+                        <input type="text" id="manual" name="manual" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="questions">Questions (comma-separated):</label>
+                        <input type="text" id="questions" name="questions" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="answers">Answers (comma-separated):</label>
+                        <input type="text" id="answers" name="answers" class="form-control">    
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hint">Hint:</label>
+                        <input type="text" id="hint" name="hint" class="form-control">    
+                    </div>
+
+                    <!-- Buttons aligned side by side -->
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" id="addUpdateButton" onclick="addOrUpdateEntry()" class="btn btn-primary">
+                            Add Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <button type="button" onclick="downloadJSONL()" class="btn btn-secondary">
+        Download JSONL
+    </button>
+            </div>
+
+            <!-- Image and pdf preview (right column) -->
+            <div class="col-md-4 d-flex flex-column align-items-center">
+                <!-- Loaded Image and PDF File Names Display -->
+                <div>
+                    <h4>Image Preview <span id="loadedImageName" style="font-size: 0.9em; color: #555;"></span></h4>
+                    <img id="imagePreview" src="" alt="Image preview" class="img-thumbnail" style="display: none; max-width: 100%;">
+                </div>
+
+                <div>
+                    <h4>PDF Preview <span id="loadedPDFName" style="font-size: 0.9em; color: #555;"></span></h4>
+                    <iframe id="pdfPreview" src="" style="display: none; width: 100%; height: 400px;" class="border rounded"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Container to display the list of entries in jsonl in tabular format -->
+        <div id="entryList" class="mt-4">
+            <h3>Entries:</h3>
+            <table class="table table-bordered" id="entriesTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Filename</th>
+                        <th>Manual</th>
+                        <th>Questions</th>
+                        <th>Answers</th>
+                        <th>Hint</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be appended here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<!-- Modal for "How to Use" guide -->
+<div class="modal fade" id="howToUseModal" tabindex="-1" aria-labelledby="howToUseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="howToUseModalLabel">How to Use the Metadata Creator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <iframe src="how-to-use.html" style="width: 100%; height: 500px; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Bootstrap JS and dependencies (for full Bootstrap support) -->
+     <!-- Bootstrap CSS and JavaScript -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

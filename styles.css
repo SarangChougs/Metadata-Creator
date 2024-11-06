@@ -1,0 +1,8 @@
+/* Style for the highlighted row */
+.selected-row {
+    background-color: #d1ecf1 !important; /* Light blue background */
+}
+
+.alert-popup {
+    transition: opacity 0.3s ease;
+}

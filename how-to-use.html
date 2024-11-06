@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use the Metadata Creator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-top: 20px;
+            color: #007bff;
+        }
+        p, li {
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">How to Use the Metadata Creator</h1>
+        <p>This guide explains how to use the Metadata Creator application to manage metadata, preview images, load PDFs, and download JSONL files with metadata. Follow each section to understand the process of using the application.</p>
+
+        <!-- Section 1: Upload Section -->
+        <h2>1. Upload Section</h2>
+        <p>The Upload Section allows you to load metadata files, image mappings, and product manuals in PDF format:</p>
+        <ul>
+            <li><strong>Existing Metadata File:</strong> Click on the "Select existing metadata file" field and upload a <code>.jsonl</code> file. The entries from this file will populate the table for review and editing.</li>
+            <li><strong>Image CSV:</strong> Click on the "Upload Image CSV" field and select a CSV file containing image mappings. Each row in the CSV should have the image filename and its URL.</li>
+            <li><strong>Product Manuals (PDF):</strong> Use the "Select Product Manuals" field to upload multiple PDF files. These files will be associated with entries based on filename similarity and can be previewed.</li>
+        </ul>
+
+        <!-- Section 2: Edit Form -->
+        <h2>2. Edit Form</h2>
+        <p>The Edit Form allows you to add or update metadata entries:</p>
+        <ul>
+            <li><strong>Filename:</strong> Enter the image filename for the metadata entry.</li>
+            <li><strong>Manual:</strong> Enter the name of the product manual or document associated with the entry.</li>
+            <li><strong>Questions:</strong> List questions related to the metadata entry, separated by commas.</li>
+            <li><strong>Answers:</strong> Enter answers corresponding to the questions, separated by commas.</li>
+            <li><strong>Hint:</strong> Provide any hints or additional information about the entry.</li>
+            <li><strong>Add or Update Entry:</strong> After filling in the fields, click <strong>"Add Entry"</strong> to create a new entry or <strong>"Update Entry"</strong> if you’re editing an existing entry. The button text changes based on the action.</li>
+        </ul>
+
+        <!-- Section 3: Viewing Entries -->
+        <h2>3. Viewing Entries</h2>
+        <p>Entries are displayed in a table below the Edit Form. Click on a row to load that entry into the Edit Form for editing. The selected row will be highlighted, and the form fields will be populated with the entry's data.</p>
+
+        <!-- Section 4: Preview Section -->
+        <h2>4. Preview Section</h2>
+        <p>In this section, you can preview images and PDFs associated with each entry:</p>
+        <ul>
+            <li><strong>Image Preview:</strong> When an entry is loaded, the corresponding image (if available) will display. The image name will also be shown next to the preview.</li>
+            <li><strong>PDF Preview:</strong> The application will attempt to load the closest-matching PDF file based on the filename. The PDF will be displayed in an embedded viewer, with the PDF name shown next to the preview.</li>
+        </ul>
+
+        <!-- Section 5: Downloading the Metadata File -->
+        <h2>5. Downloading the Metadata File</h2>
+        <p>Once you have added or updated entries, you can download the metadata in JSONL format:</p>
+        <ul>
+            <li>Click the <strong>"Download JSONL"</strong> button. The application will generate a JSONL file with all entries and include a date-time stamp in the filename for easy tracking.</li>
+        </ul>
+
+        <!-- Section 6: Additional Features -->
+        <h2>6. Additional Features</h2>
+        <p>Other helpful features in this application include:</p>
+        <ul>
+            <li><strong>Popup Notifications:</strong> Success messages appear as popups for actions such as adding/updating entries, loading files, and downloading the metadata file. These notifications disappear automatically after a few seconds.</li>
+            <li><strong>File Name Suggestions:</strong> The application automatically attempts to match the filename in entries with available image URLs and PDF files.</li>
+        </ul>
+
+        <!-- Footer -->
+        <footer class="text-center mt-5">
+            <p>&copy; 2023 Metadata Creator. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
