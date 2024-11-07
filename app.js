@@ -17,6 +17,104 @@ let pdfFilesMap = {};
 // Reference to the previously selected table row for highlighting
 let previousSelectedRow = null;
 
+// DB object
+let db;
+
+// Reference to IndexDB name MetadaDB
+const request = indexedDB.open("MetadataDB", 1);
+
+
+// ------------------------------
+// Functions for Save data to IndexDB
+// ------------------------------
+
+// function to handle the saving of each file type in the uploads store.
+function saveFileToIndexedDB(type, fileName, content) {
+    const transaction = db.transaction("uploads", "readwrite");
+    const store = transaction.objectStore("uploads");
+
+    const fileData = { type, fileName, content }; // Save as {type, fileName, content}
+    store.put(fileData); // Use `put` to add or update entry
+    console.log('File saved to DB: ' + fileData)
+}
+
+// Function to save input form entries to DB
+function saveEntriesToIndexedDB() {
+    const transaction = db.transaction("entries", "readwrite");
+    const store = transaction.objectStore("entries");
+
+    entries.forEach(entry => store.put(entry));
+}
+
+// ------------------------------
+// Functions load data from LocalDB(IndexDB)
+// ------------------------------
+
+// Function to load any previously uploaded files from the uploads store and process them accordingly
+function loadUploadsFromIndexedDB() {
+    const transaction = db.transaction("uploads", "readonly");
+    const store = transaction.objectStore("uploads");
+    const request = store.getAll();
+
+    request.onsuccess = function(event) {
+        const files = event.target.result;
+
+        files.forEach(file => {
+            if (file.type === "metadata") {
+                // Load JSONL metadata by parsing each line
+                entries = file.content
+                    .split("\n")                    // Split content into lines
+                    .filter(line => line.trim() !== "") // Remove empty lines
+                    .map(line => JSON.parse(line.trim())); // Parse each line as JSON
+                displayEntries(); // Display entries in the table
+                // Display the metadata file name in the upload section
+                document.getElementById("metadataFileName").textContent = `Loaded file from DB: ${file.fileName}`;
+            } else if (file.type === "images") {
+                // Parse CSV for image mappings
+                parseImageCSV(file.content);
+                // Display the csv file name in the upload section
+                document.getElementById("imageCSVFileName").textContent = `Loaded file from DB: ${file.fileName}`;
+            } else if (file.type === "pdfs") {
+                // Restore PDFs to pdfFilesMap
+                const pdfBlob = new Blob([file.content], { type: "application/pdf" });
+                pdfFilesMap[file.fileName] = pdfBlob; // Store each PDF in pdfFilesMap by fileName
+                populatePDFDropdown();
+            }
+        });
+    };
+}
+
+// Function to load jsonl file entries from DB
+function loadEntriesFromIndexedDB() {
+    const transaction = db.transaction("entries", "readonly");
+    const store = transaction.objectStore("entries");
+    const request = store.getAll();
+
+    request.onsuccess = function(event) {
+        entries = event.target.result;
+        displayEntries(); // Display entries in the table
+    };
+}
+
+request.onupgradeneeded = function(event) {
+    db = event.target.result;
+
+    // Store for metadata entries
+    db.createObjectStore("entries", { keyPath: "id", autoIncrement: true });
+
+    // Store for uploaded files (stores filename and file data)
+    db.createObjectStore("uploads", { keyPath: "type" }); // Type could be "metadata", "images", "pdfs"
+};
+
+request.onsuccess = function(event) {
+    db = event.target.result;
+    loadEntriesFromIndexedDB();
+    loadUploadsFromIndexedDB(); // Load uploads on startup
+};
+
+request.onerror = function(event) {
+    console.error("Database error:", event.target.errorCode);
+};
 
 // ------------------------------
 // Functions for Entry Management
@@ -44,6 +142,9 @@ function addOrUpdateEntry() {
         selectedIndex = -1; // Reset selectedIndex after update
         document.getElementById("addUpdateButton").innerText = "Add Entry"; 
     }
+
+    // Save Entry to DB
+    saveEntriesToIndexedDB();
 
     resetForm();
     displayEntries();
@@ -151,6 +252,26 @@ async function displayPDF(file) {
     pdfPreview.style.display = "block";
 }
 
+// Load and preview the selected PDF file in the iframe
+async function loadPDFPreview() {
+    const pdfSelect = document.getElementById("pdfFiles");
+    const fileName = pdfSelect.value;
+
+    if (!fileName) {
+        document.getElementById("pdfPreview").style.display = "none";
+        return; // No file selected
+    }
+
+    const file = pdfFilesMap[fileName];
+    const pdfBlob = new Blob([await file.arrayBuffer()], { type: "application/pdf" });
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    // Display the PDF in the iframe
+    const pdfPreview = document.getElementById("pdfPreview");
+    pdfPreview.src = pdfUrl;
+    pdfPreview.style.display = "block";
+}
+
 
 // ------------------------------
 // File Handling Functions
@@ -162,9 +283,15 @@ document.getElementById("existingMetadata").addEventListener("change", function(
     if (file && file.name.endsWith(".jsonl")) {
         const reader = new FileReader();
         reader.onload = function(e) {
+
+            // load data in the table
             const lines = e.target.result.split("\n").filter(line => line.trim() !== "");
             entries = lines.map(line => JSON.parse(line));
             displayEntries();
+
+            // Save to loaded data to IndexedDB
+            const content = e.target.result;
+            saveFileToIndexedDB("metadata", file.name, content); 
         };
         reader.readAsText(file);
         showBootstrapPopupAlert("Metadata JSONL loaded successfully");
@@ -188,6 +315,9 @@ document.getElementById("imageCSV").addEventListener("change", function(event) {
                 }
             });
             showBootstrapPopupAlert("Image CSV loaded successfully");
+            // Save to IndexedDB
+            const content = e.target.result;
+            saveFileToIndexedDB("images", file.name, content); 
         };
         reader.readAsText(file);
     } else {
@@ -195,13 +325,29 @@ document.getElementById("imageCSV").addEventListener("change", function(event) {
     }
 });
 
-// Load multiple PDF files and populate PDF file mappings
+
+// Load multiple PDF files, populate PDF file mappings and save to DB
 function loadPDFFiles() {
+    // Clear existing PDF files in the database
+    clearExistingPDFsInIndexedDB();
+
     const pdfInput = document.getElementById("pdfFilesInput");
-    pdfFilesMap = {};
+    const pdfPaths = {}; // Create an object to store PDF paths
+
     for (const file of pdfInput.files) {
         if (file.type === "application/pdf") {
             pdfFilesMap[file.name] = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+
+                // Save each PDF file to IndexedDB and in-memory map
+                saveFileToIndexedDB("pdfs", file.name, content);
+                
+                // Also add to the in-memory pdfFilesMap
+                //pdfFilesMap[file.name] = new Blob([content], { type: "application/pdf" });
+            };
+            reader.readAsArrayBuffer(file); // Read as ArrayBuffer for PDFs
         }
     }
     populatePDFDropdown();
@@ -303,4 +449,39 @@ function downloadJSONL() {
 
     URL.revokeObjectURL(url);
     showBootstrapPopupAlert("JSONL file downloaded successfully.");
+}
+
+// Function to parse CSV file
+function parseImageCSV(content) {
+    const lines = content.split("\n").filter(line => line.trim() !== "");
+    imageMappings = {};
+    lines.forEach(line => {
+        const [filename, url] = line.split(",").map(item => item.trim());
+        if (filename && url) {
+            imageMappings[filename] = url;
+        }
+    });
+}
+
+// Function to clear old pdf files name from db
+function clearExistingPDFsInIndexedDB() {
+    const transaction = db.transaction("uploads", "readwrite");
+    const store = transaction.objectStore("uploads");
+
+    // Open a cursor to iterate over all entries in the store
+    const request = store.openCursor();
+    request.onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            if (cursor.value.type === "pdfs") {
+                // Delete entry if it's a PDF
+                cursor.delete();
+            }
+            cursor.continue();
+        }
+    };
+
+    request.onerror = function(event) {
+        console.error("Failed to clear old PDF files:", event.target.errorCode);
+    };
 }
