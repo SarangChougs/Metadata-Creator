@@ -69,26 +69,31 @@
                                 <div class="mb-3">
                                     <label for="filename">Image File name:</label>
                                     <input type="text" id="filename" name="filename" class="form-control">
+                                    <small class="form-text text-muted">Example: babystroller_23_1.jpg</small>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="manual">Manual Name:</label>
                                     <input type="text" id="manual" name="manual" class="form-control">
+                                    <small class="form-text text-muted">Example: Canon Digital-Camera;product-name:EOS 20D Digital</small>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="questions">Questions (comma-separated):</label>
-                                    <input type="text" id="questions" name="questions" class="form-control">
+                                    <textarea id="questions" name="questions" class="form-control" oninput="adjustTextareaHeight(this)"> </textarea>
+                                    <small class="form-text text-muted">Example: What action is shown in the image ?, What product is shown in the image ?</small>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="answers">Answers (comma-separated):</label>
-                                    <input type="text" id="answers" name="answers" class="form-control">
+                                    <textarea id="answers" name="answers" class="form-control" oninput="adjustTextareaHeight(this)"> </textarea>
+                                    <small class="form-text text-muted">Example: The image shows unlocking front wheel brakes in a baby stroller., Baby stroller</small>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="hint">Hint:</label>
                                     <input type="text" id="hint" name="hint" class="form-control">
+                                    <small class="form-text text-muted">Example: product:baby-stroller,action:operating front swivel wheels</small>
                                 </div>
 
                                 <!-- Buttons aligned side by side -->

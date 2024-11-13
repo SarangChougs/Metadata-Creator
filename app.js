@@ -35,15 +35,14 @@ function saveFileToIndexedDB(type, fileName, content) {
 
     const fileData = { type, fileName, content }; // Save as {type, fileName, content}
     store.put(fileData); // Use `put` to add or update entry
-    console.log('File saved to DB: ' + fileData)
+    //console.log('File saved to DB: ' + fileData)
 }
 
 // Function to save input form entries to DB
-function saveEntriesToIndexedDB() {
+function saveEntryToIndexedDB(entry) {
     const transaction = db.transaction("entries", "readwrite");
     const store = transaction.objectStore("entries");
-
-    entries.forEach(entry => store.put(entry));
+    store.put(entry); // `put` will update the entry if the ID already exists
 }
 
 // ------------------------------
@@ -108,8 +107,9 @@ request.onupgradeneeded = function(event) {
 
 request.onsuccess = function(event) {
     db = event.target.result;
-    loadEntriesFromIndexedDB();
+    
     loadUploadsFromIndexedDB(); // Load uploads on startup
+    loadEntriesFromIndexedDB();
 };
 
 request.onerror = function(event) {
@@ -122,30 +122,36 @@ request.onerror = function(event) {
 
 // Function to add a new entry or update an existing entry in entries array
 function addOrUpdateEntry() {
-    // Gather form input values and create an entry object
     const filename = document.getElementById("filename").value.trim();
     const manual = document.getElementById("manual").value.trim();
     const questions = document.getElementById("questions").value.trim().split(",").map(item => item.trim());
     const answers = document.getElementById("answers").value.trim().split(",").map(item => item.trim());
     const hint = document.getElementById("hint").value.trim();
 
-    const entry = { filename, manual, questions, answers, hint };
+    const entry = {
+        id: selectedIndex === -1 ? Date.now() : entries[selectedIndex].id, // Use existing ID or new unique ID for new entries
+        filename: filename,
+        manual: manual,
+        questions: questions,
+        answers: answers,
+        hint: hint
+    };
 
     if (selectedIndex === -1) {
-        // Add new entry if no entry is selected
+        // Add new entry
         entries.push(entry);
+        saveEntryToIndexedDB(entry);
         showBootstrapPopupAlert("Entry added");
     } else {
-        // Update existing entry if an entry is selected
-        entries[selectedIndex] = entry;
+        // Update existing entry
+        entries[selectedIndex] = entry; // Update in-memory array
+        saveEntryToIndexedDB(entry);    // Save the updated entry to IndexedDB
         showBootstrapPopupAlert("Entry updated");
         selectedIndex = -1; // Reset selectedIndex after update
-        document.getElementById("addUpdateButton").innerText = "Add Entry"; 
+        document.getElementById("addUpdateButton").innerText = "Add Entry";
     }
 
-    // Save Entry to DB
-    saveEntriesToIndexedDB();
-
+    // Reset form and refresh the display
     resetForm();
     displayEntries();
 }
@@ -484,4 +490,9 @@ function clearExistingPDFsInIndexedDB() {
     request.onerror = function(event) {
         console.error("Failed to clear old PDF files:", event.target.errorCode);
     };
+}
+
+function adjustTextareaHeight(textarea) {
+    textarea.style.height = 'auto'; // Reset height to allow shrink
+    textarea.style.height = (textarea.scrollHeight) + 'px'; // Set height to fit content
 }
