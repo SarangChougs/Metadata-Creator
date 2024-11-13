@@ -26,7 +26,7 @@
             <!-- Input fields (left column) -->
             <div class="col-md-4">
                 <!-- Collapsible Card for Upload Section -->
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header" style="cursor: pointer;" data-bs-toggle="collapse"
                         data-bs-target="#uploadSection" aria-expanded="false" aria-controls="uploadSection">
                         <h5 class="mb-0">Upload Section</h5>
@@ -66,7 +66,10 @@
                         <div class="card-body">
                             <form id="entryForm" enctype="multipart/form-data">
                                 <!-- Input fields for the Edit Form -->
-                                <div class="mb-3">
+                                <div id="editEntryFormContainer">
+                                    <!-- Dynamically generated form fields will appear here -->
+                                </div>
+                                <!--<div class="mb-3">
                                     <label for="filename">Image File name:</label>
                                     <input type="text" id="filename" name="filename" class="form-control">
                                     <small class="form-text text-muted">Example: babystroller_23_1.jpg</small>
@@ -94,7 +97,7 @@
                                     <label for="hint">Hint:</label>
                                     <input type="text" id="hint" name="hint" class="form-control">
                                     <small class="form-text text-muted">Example: product:baby-stroller,action:operating front swivel wheels</small>
-                                </div>
+                                </div>-->
 
                                 <!-- Buttons aligned side by side -->
                                 <div class="d-flex gap-2 mb-3">
@@ -107,6 +110,35 @@
                         </div>
                     </div>
                 </div>
+                <!-- Collapsible Card for Add/Delete Column Form -->
+                <div class="card mb-3">
+                    <div class="card-header" style="cursor: pointer;" data-bs-toggle="collapse"
+                        data-bs-target="#addDeleteColumnFrom" aria-expanded="false" aria-controls="addDeleteColumnFrom">
+                        <h5 class="mb-0">Add/delete Column</h5>
+                    </div>
+                    <div id="addDeleteColumnFrom" class="collapse">
+                        <div class="card-body">
+                            <!-- Fields to add new column to the jsonl -->
+                            <div class="mb-3">
+                                <label for="newColumnName" class="form-label">New Column Name:</label>
+                                <input type="text" id="newColumnName" class="form-control" placeholder="Enter column name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newColumnValue" class="form-label">Default Value:</label>
+                                <input type="text" id="newColumnValue" class="form-control" placeholder="Enter default value">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deleteColumnSelect" class="form-label">Select Column to Delete:</label>
+                                <select id="deleteColumnSelect" class="form-control">
+                                    <option value="">Select a column</option> <!-- Default placeholder -->
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-danger" onclick="deleteColumn()">Delete Column</button>
+                            <button type="button" class="btn btn-success" onclick="addNewColumn()">Add New Column</button>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="button" onclick="downloadJSONL()" class="btn btn-secondary">
                     Download JSONL
                 </button>

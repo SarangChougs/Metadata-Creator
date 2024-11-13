@@ -23,7 +23,6 @@ let db;
 // Reference to IndexDB name MetadaDB
 const request = indexedDB.open("MetadataDB", 1);
 
-
 // ------------------------------
 // Functions for Save data to IndexDB
 // ------------------------------
@@ -43,6 +42,7 @@ function saveEntryToIndexedDB(entry) {
     const transaction = db.transaction("entries", "readwrite");
     const store = transaction.objectStore("entries");
     store.put(entry); // `put` will update the entry if the ID already exists
+    console.log("Entry updated in DB ", entry)
 }
 
 // ------------------------------
@@ -92,29 +92,9 @@ function loadEntriesFromIndexedDB() {
     request.onsuccess = function(event) {
         entries = event.target.result;
         displayEntries(); // Display entries in the table
+        populateColumnDropdown();  // Populate the column dropdown
     };
 }
-
-request.onupgradeneeded = function(event) {
-    db = event.target.result;
-
-    // Store for metadata entries
-    db.createObjectStore("entries", { keyPath: "id", autoIncrement: true });
-
-    // Store for uploaded files (stores filename and file data)
-    db.createObjectStore("uploads", { keyPath: "type" }); // Type could be "metadata", "images", "pdfs"
-};
-
-request.onsuccess = function(event) {
-    db = event.target.result;
-    
-    loadUploadsFromIndexedDB(); // Load uploads on startup
-    loadEntriesFromIndexedDB();
-};
-
-request.onerror = function(event) {
-    console.error("Database error:", event.target.errorCode);
-};
 
 // ------------------------------
 // Functions for Entry Management
@@ -122,7 +102,7 @@ request.onerror = function(event) {
 
 // Function to add a new entry or update an existing entry in entries array
 function addOrUpdateEntry() {
-    const filename = document.getElementById("filename").value.trim();
+    /* const filename = document.getElementById("filename").value.trim();
     const manual = document.getElementById("manual").value.trim();
     const questions = document.getElementById("questions").value.trim().split(",").map(item => item.trim());
     const answers = document.getElementById("answers").value.trim().split(",").map(item => item.trim());
@@ -135,17 +115,30 @@ function addOrUpdateEntry() {
         questions: questions,
         answers: answers,
         hint: hint
-    };
+    }; */
+    if (selectedIndex === -1) {
+        alert("No entry is selected for editing.");
+        return;
+    }
+
+    // Get the form container and extract updated values
+    const formContainer = document.getElementById("editEntryFormContainer");
+    const updatedEntry = {};
+    const inputs = formContainer.querySelectorAll("input");
+
+    inputs.forEach(input => {
+        updatedEntry[input.name] = input.value; // Use input name as the key
+    });
 
     if (selectedIndex === -1) {
         // Add new entry
-        entries.push(entry);
-        saveEntryToIndexedDB(entry);
+        entries.push(updatedEntry);
+        saveEntryToIndexedDB(updatedEntry);
         showBootstrapPopupAlert("Entry added");
     } else {
         // Update existing entry
-        entries[selectedIndex] = entry; // Update in-memory array
-        saveEntryToIndexedDB(entry);    // Save the updated entry to IndexedDB
+        entries[selectedIndex] = updatedEntry; // Update in-memory array
+        saveEntryToIndexedDB(updatedEntry);    // Save the updated entry to IndexedDB
         showBootstrapPopupAlert("Entry updated");
         selectedIndex = -1; // Reset selectedIndex after update
         document.getElementById("addUpdateButton").innerText = "Add Entry";
@@ -161,25 +154,53 @@ function displayEntries() {
     const tableBody = document.getElementById("entriesTable").querySelector("tbody");
     tableBody.innerHTML = ""; // Clear existing rows
 
-    // Create a row for each entry and append to table
+    // Get all unique column keys from entries
+    const allKeys = entries.reduce((keys, entry) => {
+        Object.keys(entry).forEach(key => keys.add(key));
+        return keys;
+    }, new Set());
+
+    // Update table headers dynamically
+    const tableHead = document.getElementById("entriesTable").querySelector("thead");
+    tableHead.innerHTML = ""; // Clear existing headers
+    const headerRow = document.createElement("tr");
+    headerRow.innerHTML = `<th>#</th>`;
+    allKeys.forEach(key => {
+        const th = document.createElement("th");
+        th.textContent = key;
+        headerRow.appendChild(th);
+    });
+    tableHead.appendChild(headerRow);
+
+    // Populate table rows
     entries.forEach((entry, index) => {
         const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${entry.filename}</td>
-            <td>${entry.manual}</td>
-            <td>${entry.questions.join(", ")}</td>
-            <td>${entry.answers.join(", ")}</td>
-            <td>${entry.hint}</td>
-        `;
-        row.addEventListener("click", () => loadEntryIntoForm(index));
+
+        // Add row number
+        row.innerHTML = `<td>${index + 1}</td>`;
+
+        // Add all key-value pairs dynamically
+        allKeys.forEach(key => {
+            const td = document.createElement("td");
+            td.textContent = entry[key] || ""; // Display empty if the key doesn't exist in the entry
+            row.appendChild(td);
+        });
+
+        // Add click event for editing the entry
+        row.addEventListener("click", function() {
+            loadEntryIntoForm(index);
+        });
+
         tableBody.appendChild(row);
     });
 }
 
 // Function to load an entry's data into the form fields for editing
 function loadEntryIntoForm(index) {
-    const entry = entries[index];
+    generateEditEntryForm(index); // Dynamically generate the form
+    showBootstrapPopupAlert(`Editing entry #${index + 1}`); // Optional feedback for the user
+
+    /* const entry = entries[index];
     selectedIndex = index;
 
     document.getElementById("filename").value = entry.filename;
@@ -187,11 +208,10 @@ function loadEntryIntoForm(index) {
     document.getElementById("questions").value = entry.questions.join(", ");
     document.getElementById("answers").value = entry.answers.join(", ");
     document.getElementById("hint").value = entry.hint;
-
+ */
     document.getElementById("addUpdateButton").innerText = "Update Entry";
     highlightSelectedRow(index);
-    showImagePreview(entry.filename);
-    loadPDFBasedOnFilename(entry.filename);
+    
 }
 
 // Function to reset the form and clear selectedIndex
@@ -200,6 +220,107 @@ function resetForm() {
     selectedIndex = -1;
     document.getElementById("addUpdateButton").innerText = "Add Entry";
     document.getElementById("imagePreview").style.display = "none";
+}
+
+// ------------------------------
+// Functions for Adding deleting Columns
+// ------------------------------
+
+// Function to add new column to the metadata
+function addNewColumn() {
+    const newColumnName = document.getElementById("newColumnName").value.trim();
+    const newColumnValue = document.getElementById("newColumnValue").value.trim();
+
+    if (!newColumnName) {
+        alert("Please enter a column name.");
+        return;
+    }
+
+    // Add the new column to all entries in memory
+    entries = entries.map(entry => ({
+        ...entry, // Copy existing key-value pairs
+        [newColumnName]: newColumnValue // Add the new column with default value
+    }));
+
+    // Save updated entries to IndexedDB
+    saveAllEntriesToIndexedDB();
+
+    // Refresh the display
+    displayEntries();
+    // Refresh the delete columns dropdown menu
+    populateColumnDropdown();
+
+    // Show success message
+    showBootstrapPopupAlert(`New column '${newColumnName}' added with default value '${newColumnValue}'.`);
+
+    // Clear the inputs
+    document.getElementById("newColumnName").value = "";
+    document.getElementById("newColumnValue").value = "";
+}
+
+// Save all entries to IndexedDB
+function saveAllEntriesToIndexedDB() {
+    const transaction = db.transaction("entries", "readwrite");
+    const store = transaction.objectStore("entries");
+
+    entries.forEach(entry => store.put(entry)); // Use `put` to update all entries
+}
+
+// Function to populate the delete columns dropdown menu
+function populateColumnDropdown() {
+    console.log("Current entries:", entries); // Debugging: Check the entries array
+
+    const dropdown = document.getElementById("deleteColumnSelect");
+    dropdown.innerHTML = '<option value="">Select a column</option>'; // Reset dropdown
+
+    // Ensure entries have data
+    if (entries.length === 0) {
+        console.warn("No entries available to populate dropdown.");
+        return;
+    }
+
+    // Get all unique keys (column names) from the entries
+    const allKeys = entries.reduce((keys, entry) => {
+        Object.keys(entry).forEach(key => keys.add(key));
+        return keys;
+    }, new Set());
+
+    // Populate the dropdown with keys
+    allKeys.forEach(key => {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = key;
+        dropdown.appendChild(option);
+    });
+
+    console.log("Dropdown populated with keys:", [...allKeys]); // Debugging: Check added keys
+}
+
+// Delete columns function
+function deleteColumn() {
+    const dropdown = document.getElementById("deleteColumnSelect");
+    const columnName = dropdown.value;
+
+    if (!columnName) {
+        alert("Please select a column to delete.");
+        return;
+    }
+
+    // Remove the selected column from all entries
+    entries = entries.map(entry => {
+        const { [columnName]: _, ...rest } = entry; // Remove the column using destructuring
+        return rest;
+    });
+
+    // Save updated entries to IndexedDB
+    saveAllEntriesToIndexedDB();
+
+    // Refresh the display and dropdown
+    displayEntries();
+    populateColumnDropdown();
+
+    // Show success message
+    showBootstrapPopupAlert(`Column '${columnName}' deleted successfully.`);
 }
 
 
@@ -372,6 +493,47 @@ function populatePDFDropdown() {
     }
 }
 
+// ------------------------------
+// Functions to generate edit-form dynamically
+// ------------------------------
+
+// generate form function
+function generateEditEntryForm(index) {
+    const entry = entries[index]; // Get the selected entry
+    const formContainer = document.getElementById("editEntryFormContainer");
+    formContainer.innerHTML = ""; // Clear existing form fields
+
+    // Dynamically create input fields for each key-value pair
+    Object.keys(entry).forEach(key => {
+        const formGroup = document.createElement("div");
+        formGroup.className = "mb-3";
+
+        // Create label
+        const label = document.createElement("label");
+        label.htmlFor = key;
+        label.className = "form-label";
+        label.textContent = key;
+
+        // Create input
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "form-control";
+        input.id = key;
+        input.name = key;
+        input.value = entry[key] || ""; // Set the current value of the entry
+
+        // Append to form group
+        formGroup.appendChild(label);
+        formGroup.appendChild(input);
+        formContainer.appendChild(formGroup);
+    });
+
+    // Store the selected index for saving
+    selectedIndex = index;
+
+    showImagePreview(entry.filename);
+    loadPDFBasedOnFilename(entry.filename);
+}
 
 // ------------------------------
 // Utility Functions
@@ -496,3 +658,28 @@ function adjustTextareaHeight(textarea) {
     textarea.style.height = 'auto'; // Reset height to allow shrink
     textarea.style.height = (textarea.scrollHeight) + 'px'; // Set height to fit content
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("App initialized, loading data...");
+
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+    
+        // Store for metadata entries
+        db.createObjectStore("entries", { keyPath: "id", autoIncrement: true });
+    
+        // Store for uploaded files (stores filename and file data)
+        db.createObjectStore("uploads", { keyPath: "type" }); // Type could be "metadata", "images", "pdfs"
+    };
+    
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        
+        loadUploadsFromIndexedDB(); // Load uploads on startup
+        loadEntriesFromIndexedDB();
+    };
+    
+    request.onerror = function(event) {
+        console.error("Database error:", event.target.errorCode);
+    };
+});
